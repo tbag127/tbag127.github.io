@@ -59,7 +59,14 @@
         #viewport-params-expand {
             top: 30px;
         }
-    </style> 
+
+        .telegram-button {
+            font-size: 16px; /* 增加字体大小 */
+            height: 50px; /* 增加按钮的高度 */
+            padding: 10px 20px; /* 增加内边距以使按钮看起来更大 */
+        }
+
+    </style>
 </head>
 
 <body>
@@ -67,11 +74,25 @@
         <div align="center">
             <a href="https://ton.org/"><img width="68" src="./assets/tapps.png" alt="logo of telegram web apps"></a>
         </div>
-        <h1>Modals</h1>
-        <button onclick="Telegram.WebApp.showAlert('Hello World!');">Launch Alert</button>
-        <button onclick="showPopup();">Launch Popup</button>
+        <h1 style="text-align: center; margin-bottom: 20px;">Lucky Wang</h1>
+        <!-- <h1 style="text-align: center; color: transparent;">PH</h1> -->
 
-        <h1>Links</h1>
+        <div align="center">
+            <button class="telegram-button" onclick="Telegram.WebApp.showAlert('Hello World!');" style="margin-right: 30px;">🎋 竹子 500</button>
+            <!-- <button class="telegram-button" onclick="showPopup();">TON：3.14</button> -->
+            <button class="telegram-button" onclick="showPopup();"><img src="./assets/ton_symbol.png" alt="Icon" style="vertical-align: middle; width: 20px; height: 20px; margin-right: 4px;">TON 3.14</button>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <img width="200" src="./assets/gift.jpg">
+        </div>
+        <!-- <h1 align="center">Buttons</h1> -->
+        <!-- <div  align="center">
+            <button onclick="Telegram.WebApp.expand();">Expand Webview</button>
+            <button onclick="toggleMainButton();">Toggle Main Button</button>
+        </div> -->
+
+        <h1 align="center">Links</h1>
         <ul>
             <li>
                 <a href="javascript:Telegram.WebApp.openTelegramLink('https://t.me/trendingapps');">Open link within Telegram</a>
@@ -84,10 +105,8 @@
             </li>
         </ul>
 
-        <h1>Buttons</h1>
-        <button onclick="Telegram.WebApp.expand();">Expand Webview</button>
-        <button onclick="toggleMainButton();">Toggle Main Button</button>
     </main>
+
     <div id="viewport"></div>
     <div id="viewport-params-size"></div>
     <div id="viewport-params-expand"></div>
@@ -103,21 +122,21 @@
 
         // Show main button
         Telegram.WebApp.MainButton.setParams({
-            text: 'Main Button'
+            text: '🎁 点击抽奖 🎁' 
         });
         Telegram.WebApp.MainButton.onClick(function () {
-            Telegram.WebApp.showAlert('Main Button was clicked')
+            Telegram.WebApp.showAlert('消耗2个竹子，获得0.01个TON')
         });	
         Telegram.WebApp.MainButton.show();
 
         // Function to call showPopup API
         function showPopup() {
             Telegram.WebApp.showPopup({
-                title: 'Title',
-                message: 'Some message',
+                title: 'TON余额',
+                message: '3.14',
                 buttons: [
-                    {id: 'link', type: 'default', text: 'Open ton.org'},
-                    {type: 'cancel'},
+                    {id: 'link', type: 'default', text: '全部提现'},
+                    {type: 'cancel', text: '取消'},
                 ]
             }, function(btn) {
                 if (btn === 'link') {
@@ -135,23 +154,23 @@
             }
         };
 
-        function setViewportData() {
-            var sizeEl = document.getElementById('viewport-params-size');
-            sizeEl.innerText = 'width: ' + window.innerWidth + ' x ' + 
-                'height: ' + Telegram.WebApp.viewportStableHeight;
+        // function setViewportData() {
+        //     var sizeEl = document.getElementById('viewport-params-size');
+        //     sizeEl.innerText = 'width: ' + window.innerWidth + ' x ' + 
+        //         'height: ' + Telegram.WebApp.viewportStableHeight;
 
-            var expandEl = document.querySelector('#viewport-params-expand');
-            expandEl.innerText = 'Is Expanded: ' + (Telegram.WebApp.isExpanded ? 'true' : 'false');
-        }
+        //     var expandEl = document.querySelector('#viewport-params-expand');
+        //     expandEl.innerText = 'Is Expanded: ' + (Telegram.WebApp.isExpanded ? 'true' : 'false');
+        // }
 
-        Telegram.WebApp.setHeaderColor('secondary_bg_color');
+        // Telegram.WebApp.setHeaderColor('secondary_bg_color');
 
-        setViewportData();
-        Telegram.WebApp.onEvent('viewportChanged', setViewportData);
+        // setViewportData();
+        // Telegram.WebApp.onEvent('viewportChanged', setViewportData);
 
-        Telegram.WebApp.onEvent('themeChanged', function() {
-            document.body.setAttribute('style', '--bg-color:' + Telegram.WebApp.backgroundColor);
-        });
+        // Telegram.WebApp.onEvent('themeChanged', function() {
+        //     document.body.setAttribute('style', '--bg-color:' + Telegram.WebApp.backgroundColor);
+        // });
 
     </script>
 
