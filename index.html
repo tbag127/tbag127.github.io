@@ -60,10 +60,18 @@
             top: 30px;
         }
 
+        #ton-button {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+
         .telegram-button {
             font-size: 16px; /* 增加字体大小 */
             height: 50px; /* 增加按钮的高度 */
-            padding: 10px 20px; /* 增加内边距以使按钮看起来更大 */
+            padding: 10px 10px; /* 增加内边距以使按钮看起来更大 */
         }
 
     </style>
@@ -71,6 +79,8 @@
 
 <body>
     <main>
+        <button id="ton-button" class="telegram-button" onclick="showPopup();">提现</button>
+        
         <div align="center">
             <a href="https://ton.org/"><img width="68" src="./assets/tapps.png" alt="logo of telegram web apps"></a>
         </div>
@@ -78,13 +88,17 @@
         <!-- <h1 style="text-align: center; color: transparent;">PH</h1> -->
 
         <div align="center">
-            <button class="telegram-button" onclick="Telegram.WebApp.showAlert('Hello World!');" style="margin-right: 30px;">🎋 竹子 500</button>
+            <button class="telegram-button" onclick="Telegram.WebApp.showAlert('竹子可以用来抽奖');" style="margin-right: 30px;">🎋 竹子 500</button>
+
             <!-- <button class="telegram-button" onclick="showPopup();">TON：3.14</button> -->
-            <button class="telegram-button" onclick="showPopup();"><img src="./assets/ton_symbol.png" alt="Icon" style="vertical-align: middle; width: 20px; height: 20px; margin-right: 4px;">TON 3.14</button>
+            <button class="telegram-button" onclick="showPopup();">
+                <img src="./assets/ton_symbol.png" alt="Icon" style="vertical-align: middle; width: 20px; height: 20px; margin-right: 4px;">
+                TON 3.14
+            </button>
         </div>
 
         <div style="text-align: center; margin-top: 20px;">
-            <img width="200" src="./assets/gift.jpg">
+            <img width="200" src="./assets/gift-removebg.png">
         </div>
         <!-- <h1 align="center">Buttons</h1> -->
         <!-- <div  align="center">
@@ -92,7 +106,7 @@
             <button onclick="toggleMainButton();">Toggle Main Button</button>
         </div> -->
 
-        <h1 align="center">Links</h1>
+        <!-- <h1 align="center">Links</h1>
         <ul>
             <li>
                 <a href="javascript:Telegram.WebApp.openTelegramLink('https://t.me/trendingapps');">Open link within Telegram</a>
@@ -103,7 +117,7 @@
             <li>
                 <a href="javascript:Telegram.WebApp.openLink('https://telegra.ph/api',{try_instant_view:true});">Open link inside Telegram webview</a>
             </li>
-        </ul>
+        </ul> -->
 
     </main>
 
