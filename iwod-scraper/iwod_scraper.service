@@ -1,0 +1,15 @@
+[Unit]
+Description=iWOD Gym Data Scraper Service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/iwod_scraper
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /home/ubuntu/iwod_scraper/scraper.py
+Restart=always
+RestartSec=3600
+
+[Install]
+WantedBy=multi-user.target
