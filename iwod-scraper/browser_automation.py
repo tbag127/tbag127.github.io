@@ -21,49 +21,59 @@ def run_javascript_browser(script):
     _output_command('</run_javascript_browser>')
     return ''
 
-def reload_and_verify_page():
+def reload_and_verify_page(max_retries=3):
     """
     Reload the page and verify elements are present
     Returns True if page reloaded successfully, False otherwise
     """
-    # Force a hard reload
-    run_javascript_browser('window.location.reload(true);')
-    time.sleep(5)  # Initial wait for reload
-    
-    # View the page content to verify load
-    _output_command('<view_browser/>')
-    
-    # Check for elements
-    verify_script = """
-    try {
-        const elements = document.querySelectorAll('div[type="flex"] > a');
-        if (elements.length === 0) {
-            console.error('No metric elements found');
+    for attempt in range(max_retries):
+        # Force a hard reload
+        run_javascript_browser('window.location.reload(true);')
+        time.sleep(5)  # Initial wait for reload
+        
+        # View the page content to verify load
+        _output_command('<view_browser/>')
+        
+        # Check for elements and their values
+        verify_script = """
+        try {
+            const requiredElements = {
+                '客流': document.querySelector('p[devinid="84"]'),
+                '售课': document.querySelector('p[devinid="79"]')
+            };
+            
+            const results = {};
+            Object.entries(requiredElements).forEach(([key, el]) => {
+                if (!el || !el.textContent) {
+                    console.error(`Missing or empty element: ${key}`);
+                    results[key] = false;
+                } else {
+                    const value = el.textContent.trim();
+                    console.log(`Found ${key} with value: ${value}`);
+                    results[key] = true;
+                }
+            });
+            
+            const allPresent = Object.values(results).every(v => v);
+            console.log('VERIFY_RESULT:', allPresent ? 'success' : 'failed');
+            return allPresent;
+        } catch (e) {
+            console.error('Error verifying page:', e);
             return false;
         }
+        """
+        run_javascript_browser(verify_script)
         
-        let allLoaded = true;
-        elements.forEach(card => {
-            const title = card.querySelector('p:first-child');
-            const value = card.querySelector('p:nth-child(2)');
-            if (!title || !value || !title.textContent || !value.textContent) {
-                console.error('Incomplete element found');
-                allLoaded = false;
-            }
-        });
-        
-        console.log('Page verification complete:', allLoaded ? 'success' : 'failed');
-        return allLoaded;
-    } catch (e) {
-        console.error('Error verifying page:', e);
-        return false;
-    }
-    """
-    run_javascript_browser(verify_script)
-    
-    # Get console output to check verification result
-    _output_command('<get_browser_console/>')
-    return True  # For testing, assume success
+        # Check console output for verification result
+        console_output = get_browser_console()
+        if 'VERIFY_RESULT: success' in console_output:
+            return True
+            
+        if attempt < max_retries - 1:
+            print(f"Page verification failed, retrying ({attempt + 1}/{max_retries})")
+            time.sleep(3)  # Wait before retry
+            
+    return False  # All retries failed
 
 def get_browser_console():
     """Get the browser console output"""

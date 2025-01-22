@@ -272,13 +272,11 @@ def extract_data():
         
         # Force page reload and verify elements are loaded
         logger.info("Forcing page reload to get fresh data")
-        if not reload_and_verify_page():
-            raise Exception("Failed to reload and verify page")
+        if not reload_and_verify_page(max_retries=3):
+            raise Exception("Failed to reload and verify page after retries")
         
         # Extract data after successful reload
         logger.info("Page reloaded successfully, extracting data")
-        
-        # Verify elements are present before extraction
         max_retries = 3
         retry_count = 0
         while retry_count < max_retries:
