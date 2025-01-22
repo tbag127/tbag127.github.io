@@ -7,7 +7,10 @@ import requests
 import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from browser_automation import navigate_browser, run_javascript_browser, view_browser, get_browser_console
+from browser_automation import (
+    navigate_browser, run_javascript_browser, view_browser,
+    get_browser_console, reload_and_verify_page
+)
 
 # Authentication monitoring
 AUTH_ATTEMPT_LIMIT = 5  # Maximum number of failed attempts before extended cooldown
@@ -267,12 +270,15 @@ def extract_data():
         url = 'https://www.iwod.cn/admin/dataAnalysis/storeSummary?title=%E6%95%B0%E6%8D%AE%E6%A6%82%E5%86%B5'
         navigate_browser(url)
         
-        # Force page reload using JavaScript and verify
+        # Force page reload and verify elements are loaded
         logger.info("Forcing page reload to get fresh data")
-        run_javascript_browser("window.location.reload(true);")
-        time.sleep(5)  # Initial wait for reload
+        if not reload_and_verify_page():
+            raise Exception("Failed to reload and verify page")
         
-        # Verify page loaded correctly and wait for data
+        # Extract data after successful reload
+        logger.info("Page reloaded successfully, extracting data")
+        
+        # Verify elements are present before extraction
         max_retries = 3
         retry_count = 0
         while retry_count < max_retries:
