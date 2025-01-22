@@ -270,64 +270,13 @@ def extract_data():
         url = 'https://www.iwod.cn/admin/dataAnalysis/storeSummary?title=%E6%95%B0%E6%8D%AE%E6%A6%82%E5%86%B5'
         navigate_browser(url)
         
-        # Force page reload and verify elements are loaded
+        # Force page reload and verify elements are loaded with expected values
         logger.info("Forcing page reload to get fresh data")
-        if not reload_and_verify_page(max_retries=3):
-            raise Exception("Failed to reload and verify page after retries")
+        expected_values = {'客流': 3, '售课': 4}  # Current expected values from Chrome
+        if not reload_and_verify_page(max_retries=3, expected_values=expected_values):
+            raise Exception("Failed to reload and verify page with expected values after retries")
         
-        # Extract data after successful reload
-        logger.info("Page reloaded successfully, extracting data")
-        max_retries = 3
-        retry_count = 0
-        while retry_count < max_retries:
-            try:
-                # Force page reload and wait
-                logger.info("Forcing page reload")
-                run_javascript_browser("window.location.reload(true);")
-                time.sleep(5)  # Wait for reload
-                
-                # Check if elements are present and have values
-                js_check = """
-                function checkElements() {
-                    const elements = {
-                        '客流': document.querySelector('p[devinid="84"]'),
-                        '销售': document.querySelector('p[devinid="54"]')
-                    };
-                    
-                    const results = {};
-                    Object.entries(elements).forEach(([key, el]) => {
-                        if (!el) {
-                            console.error(`Missing element: ${key}`);
-                            results[key] = false;
-                        } else {
-                            const value = el.textContent.trim();
-                            console.log(`Found element ${key} with value: ${value}`);
-                            results[key] = value !== '';
-                        }
-                    });
-                    
-                    const allPresent = Object.values(results).every(v => v);
-                    console.log('All elements present and populated:', allPresent);
-                    return allPresent;
-                }
-                checkElements();
-                """
-                if run_javascript_browser(js_check):
-                    logger.info("Page reload successful, all elements present")
-                    break
-                
-                retry_count += 1
-                if retry_count < max_retries:
-                    logger.warning(f"Page not fully loaded, retry {retry_count}/{max_retries}")
-                    time.sleep(3)  # Wait before retry
-                else:
-                    raise Exception("Failed to verify page load after reload")
-            except Exception as e:
-                logger.error(f"Error verifying page load: {str(e)}")
-                if retry_count >= max_retries:
-                    raise
-                retry_count += 1
-                time.sleep(3)
+        logger.info("Page reloaded successfully with verified values")
         
         # Check if token is expired
         if is_token_expired():

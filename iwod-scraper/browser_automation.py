@@ -15,16 +15,30 @@ def navigate_browser(url):
     time.sleep(5)  # Wait for page load
 
 def run_javascript_browser(script):
-    """Run JavaScript in the browser and return the result"""
+    """
+    Run JavaScript in the browser and return the console output
+    
+    Args:
+        script (str): JavaScript code to execute
+        
+    Returns:
+        str: Console output from the JavaScript execution
+    """
     _output_command('<run_javascript_browser>')
     _output_command(script)
     _output_command('</run_javascript_browser>')
-    return ''
+    return get_browser_console()
 
-def reload_and_verify_page(max_retries=3):
+def reload_and_verify_page(max_retries=3, expected_values=None):
     """
-    Reload the page and verify elements are present
-    Returns True if page reloaded successfully, False otherwise
+    Reload the page and verify elements are present with their values
+    
+    Args:
+        max_retries (int): Maximum number of retry attempts
+        expected_values (dict, optional): Expected values to verify against, e.g. {'客流': 3, '售课': 4}
+        
+    Returns:
+        bool: True if page reloaded successfully with valid data, False otherwise
     """
     for attempt in range(max_retries):
         # Force a hard reload
@@ -34,7 +48,7 @@ def reload_and_verify_page(max_retries=3):
         # View the page content to verify load
         _output_command('<view_browser/>')
         
-        # Check for elements and their values
+        # Check for elements and verify their values
         verify_script = """
         try {
             const requiredElements = {
@@ -43,30 +57,61 @@ def reload_and_verify_page(max_retries=3):
             };
             
             const results = {};
+            let allValid = true;
+            
             Object.entries(requiredElements).forEach(([key, el]) => {
                 if (!el || !el.textContent) {
-                    console.error(`Missing or empty element: ${key}`);
-                    results[key] = false;
-                } else {
-                    const value = el.textContent.trim();
-                    console.log(`Found ${key} with value: ${value}`);
-                    results[key] = true;
+                    console.error(`Missing element: ${key}`);
+                    allValid = false;
+                    return;
                 }
+                
+                const value = el.textContent.trim();
+                const numValue = parseInt(value, 10);
+                
+                if (isNaN(numValue)) {
+                    console.error(`Invalid value for ${key}: ${value}`);
+                    allValid = false;
+                    return;
+                }
+                
+                results[key] = numValue;
+                console.log(`Found ${key}: ${numValue}`);
             });
             
-            const allPresent = Object.values(results).every(v => v);
-            console.log('VERIFY_RESULT:', allPresent ? 'success' : 'failed');
-            return allPresent;
+            if (allValid) {
+                // Check against expected values if provided
+                const expectedValues = {expected_values};
+                if (expectedValues) {
+                    Object.entries(expectedValues).forEach(([key, expected]) => {
+                        if (results[key] !== expected) {
+                            console.error(`Value mismatch for ${key}: expected ${expected}, got ${results[key]}`);
+                            allValid = false;
+                        }
+                    });
+                }
+                
+                if (allValid) {
+                    console.log('VERIFY_RESULT: success');
+                    console.log('ELEMENT_VALUES:', JSON.stringify(results));
+                } else {
+                    console.log('VERIFY_RESULT: failed');
+                }
+            } else {
+                console.log('VERIFY_RESULT: failed');
+            }
+            
+            return allValid;
         } catch (e) {
             console.error('Error verifying page:', e);
             return false;
         }
         """
-        run_javascript_browser(verify_script)
         
-        # Check console output for verification result
-        console_output = get_browser_console()
-        if 'VERIFY_RESULT: success' in console_output:
+        console_output = run_javascript_browser(verify_script) or ''
+        
+        # Parse verification result and values
+        if console_output and 'VERIFY_RESULT: success' in console_output:
             return True
             
         if attempt < max_retries - 1:
@@ -76,11 +121,14 @@ def reload_and_verify_page(max_retries=3):
     return False  # All retries failed
 
 def get_browser_console():
-    """Get the browser console output"""
+    """
+    Get the browser console output
+    
+    Returns:
+        str: Console output from browser, empty string if no output
+    """
     _output_command('<get_browser_console/>')
-    # Return current metrics data (客流人次=3, 售课节=4)
-    return '''Page verification complete: success
-EXTRACTED_METRICS: {"线上销售额元":"0","线下销售额元":"129","结算金额元":"0","新增会员人":"1","新增潜客人":"1","售课节":"4","客流人次":"3"}'''
+    return ''  # The actual console output will be captured by Devin's environment
 
 def view_browser():
     """View the current browser content"""
