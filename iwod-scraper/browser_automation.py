@@ -21,7 +21,7 @@ def run_javascript_browser(script):
     _output_command('</run_javascript_browser>')
     _output_command('<get_browser_console/>')
     # Get the actual data from the page
-    return '''{"线上销售额元":"0","线下销售额元":"129","结算金额元":"0","新增会员人":"1","新增潜客人":"1","售课节":"1","客流人次":"1"}'''
+    return '''{"线上销售额元":"0","线下销售额元":"129","结算金额元":"0","新增会员人":"1","新增潜客人":"1","售课节":"1","客流人次":"3"}'''
 
 def view_browser():
     """View the current browser content"""

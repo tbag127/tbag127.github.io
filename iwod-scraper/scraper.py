@@ -5,18 +5,47 @@ import json
 import pytz
 import requests
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
 from browser_automation import navigate_browser, run_javascript_browser, view_browser
+
+# Authentication monitoring
+AUTH_ATTEMPT_LIMIT = 5  # Maximum number of failed attempts before extended cooldown
+AUTH_COOLDOWN = 300  # 5 minutes cooldown after reaching attempt limit
+auth_attempts = {
+    'count': 0,
+    'last_attempt': None,
+    'cooldown_until': None
+}
+
+# Load environment variables from the correct path
+import pathlib
+env_path = pathlib.Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler('scraper.log'),
+        logging.FileHandler('scraper.error.log', level=logging.ERROR),
         logging.StreamHandler()
     ]
 )
+
+# Create logger
+logger = logging.getLogger('iwod_scraper')
+
+# Add authentication logger with separate file
+auth_handler = logging.FileHandler('auth.log')
+auth_handler.setLevel(logging.INFO)
+auth_handler.setFormatter(logging.Formatter('%(asctime)s - AUTH - %(levelname)s - %(message)s'))
+
+auth_logger = logging.getLogger('iwod_auth')
+auth_logger.setLevel(logging.INFO)
+auth_logger.addHandler(auth_handler)
+auth_logger.addHandler(logging.StreamHandler())
 
 # Beijing timezone for time checks
 BEIJING_TZ = pytz.timezone('Asia/Shanghai')
@@ -125,11 +154,11 @@ def wait_for_login_success(timeout=300):  # 5 minutes timeout
         currentUrl.includes('/admin/dataAnalysis/storeSummary');
         """
         if run_javascript_browser(js_script):
-            logging.info("Login successful - returned to dashboard")
+            auth_logger.info("Login successful - returned to dashboard")
             # Store authentication state after successful login
             auth_state = store_auth_state()
             if auth_state:
-                logging.info("Authentication state stored successfully")
+                auth_logger.info("Authentication state stored successfully")
             return True
             
         # Check if we can access protected elements
@@ -142,11 +171,11 @@ def wait_for_login_success(timeout=300):  # 5 minutes timeout
         }
         """
         if run_javascript_browser(js_script):
-            logging.info("Login successful - can access protected elements")
+            auth_logger.info("Login successful - can access protected elements")
             # Store authentication state after successful login
             auth_state = store_auth_state()
             if auth_state:
-                logging.info("Authentication state stored successfully")
+                auth_logger.info("Authentication state stored successfully")
             return True
             
         time.sleep(5)  # Check every 5 seconds
@@ -158,9 +187,32 @@ def handle_token_expiration():
     """
     Handle expired token by initiating QR code login flow
     Returns True if login successful, False otherwise
+    Includes authentication attempt monitoring and cooldown periods
     """
     try:
-        logging.info("Initiating QR code login flow")
+        # Check if we're in cooldown
+        current_time = datetime.now(BEIJING_TZ)
+        if auth_attempts['cooldown_until'] and current_time < auth_attempts['cooldown_until']:
+            wait_time = (auth_attempts['cooldown_until'] - current_time).total_seconds()
+            auth_logger.warning(f"Authentication in cooldown. Please wait {wait_time:.0f} seconds before next attempt.")
+            return False
+
+        # Update authentication attempts
+        auth_attempts['count'] += 1
+        auth_attempts['last_attempt'] = current_time
+        
+        if auth_attempts['count'] >= AUTH_ATTEMPT_LIMIT:
+            auth_attempts['cooldown_until'] = current_time + timedelta(seconds=AUTH_COOLDOWN)
+            auth_logger.error(
+                f"Authentication attempt limit reached ({auth_attempts['count']}/{AUTH_ATTEMPT_LIMIT}). "
+                f"Cooldown initiated until: {auth_attempts['cooldown_until'].strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+            return False
+
+        auth_logger.info(
+            f"Initiating QR code login flow (Attempt {auth_attempts['count']}/{AUTH_ATTEMPT_LIMIT} "
+            f"at {current_time.strftime('%Y-%m-%d %H:%M:%S')})"
+        )
         
         # Navigate to QR code login page
         navigate_browser('https://www.iwod.cn/qrconnect/')
@@ -169,17 +221,36 @@ def handle_token_expiration():
         time.sleep(5)
         
         # Notify user to scan QR code
-        logging.warning("QR code displayed - Please scan with WeChat")
+        auth_logger.warning(
+            f"QR code displayed - Please scan with WeChat "
+            f"(Attempt {auth_attempts['count']}/{AUTH_ATTEMPT_LIMIT})"
+        )
         
         # Wait for successful login
         if wait_for_login_success():
+            # Reset authentication attempts on success
+            auth_attempts['count'] = 0
+            auth_attempts['cooldown_until'] = None
+            auth_logger.info(
+                f"Authentication successful at {datetime.now(BEIJING_TZ).strftime('%Y-%m-%d %H:%M:%S')} "
+                "- Authentication attempts reset"
+            )
+            
             # Navigate back to dashboard
             navigate_browser('https://www.iwod.cn/admin/dataAnalysis/storeSummary?title=%E6%95%B0%E6%8D%AE%E6%A6%82%E5%86%B5')
             return True
-            
+        
+        auth_logger.error(
+            f"Authentication failed (Attempt {auth_attempts['count']}/{AUTH_ATTEMPT_LIMIT}) "
+            f"at {datetime.now(BEIJING_TZ).strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         return False
+            
     except Exception as e:
-        logging.error(f"Error in handle_token_expiration: {str(e)}")
+        auth_logger.error(
+            f"Error in handle_token_expiration: {str(e)} "
+            f"(Attempt {auth_attempts['count']}/{AUTH_ATTEMPT_LIMIT})"
+        )
         return False
 
 def extract_data():
@@ -188,8 +259,50 @@ def extract_data():
     Returns a dictionary containing the scraped data
     """
     try:
-        # Navigate to the dashboard using Devin browser command
-        navigate_browser('https://www.iwod.cn/admin/dataAnalysis/storeSummary?title=%E6%95%B0%E6%8D%AE%E6%A6%82%E5%86%B5')
+        # Navigate to the dashboard and force reload
+        url = 'https://www.iwod.cn/admin/dataAnalysis/storeSummary?title=%E6%95%B0%E6%8D%AE%E6%A6%82%E5%86%B5'
+        navigate_browser(url)
+        
+        # Force page reload using JavaScript and verify
+        logger.info("Forcing page reload to get fresh data")
+        run_javascript_browser("window.location.reload(true);")
+        time.sleep(5)  # Initial wait for reload
+        
+        # Verify page loaded correctly and wait for data
+        max_retries = 3
+        retry_count = 0
+        while retry_count < max_retries:
+            try:
+                # Check if critical elements are present
+                js_check = """
+                const elements = {
+                    '客流': document.querySelector('p[devinid="84"]'),
+                    '销售': document.querySelector('p[devinid="54"]')
+                };
+                return Object.entries(elements).every(([key, el]) => {
+                    if (!el) {
+                        console.error(`Missing element: ${key}`);
+                        return false;
+                    }
+                    return true;
+                });
+                """
+                if run_javascript_browser(js_check):
+                    logger.info("Page reload successful, all elements present")
+                    break
+                
+                retry_count += 1
+                if retry_count < max_retries:
+                    logger.warning(f"Page not fully loaded, retry {retry_count}/{max_retries}")
+                    time.sleep(3)  # Wait before retry
+                else:
+                    raise Exception("Failed to verify page load after reload")
+            except Exception as e:
+                logger.error(f"Error verifying page load: {str(e)}")
+                if retry_count >= max_retries:
+                    raise
+                retry_count += 1
+                time.sleep(3)
         
         # Check if token is expired
         if is_token_expired():
