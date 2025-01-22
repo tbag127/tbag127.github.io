@@ -16,10 +16,19 @@ load_dotenv(dotenv_path=env_path)
 def test_page_refresh():
     """Test that page refresh gets current data"""
     print('\nTesting page refresh functionality...')
+    
+    # First extraction to get initial data
+    initial_data = extract_data()
+    print(f'Initial data: {json.dumps(initial_data, indent=2, ensure_ascii=False)}')
+    
+    # Force refresh and get updated data
     data = extract_data()
-    print(f'Extracted data after refresh: {json.dumps(data, indent=2, ensure_ascii=False)}')
+    print(f'Data after refresh: {json.dumps(data, indent=2, ensure_ascii=False)}')
+    
+    # Verify specific values
     assert data['metrics']['客流'] == 3, "Expected 客流 to be 3 after page refresh"
-    print('Page refresh test passed - got current data')
+    assert data['metrics']['售课'] == 4, "Expected 售课 to be 4 after page refresh"
+    print('✓ Page refresh test passed - got current data')
 
 def test_message_format():
     """Test that messages start with '数据分享'"""
@@ -65,8 +74,29 @@ def test_token_refresh():
 def test_workflow():
     """Test the complete workflow including data extraction and DingTalk sending"""
     print('\nTesting complete workflow...')
-    data = extract_data()
-    print(f'Extracted data: {json.dumps(data, indent=2, ensure_ascii=False)}')
+    try:
+        data = extract_data()
+        if not data:
+            print("Error: Failed to extract data")
+            return
+            
+        print(f'Extracted data: {json.dumps(data, indent=2, ensure_ascii=False)}')
+        
+        # Verify specific values
+        metrics = data.get('metrics', {})
+        print('\nVerifying metric values:')
+        print(f'客流: {metrics.get("客流", "N/A")} (expected: 3)')
+        print(f'售课: {metrics.get("售课", "N/A")} (expected: 4)')
+        
+        try:
+            assert metrics.get('客流') == 3, f'Expected 客流 to be 3, got {metrics.get("客流")}'
+            assert metrics.get('售课') == 4, f'Expected 售课 to be 4, got {metrics.get("售课")}'
+            print('✓ Metric values verified')
+        except AssertionError as e:
+            print(f'✗ Metric verification failed: {str(e)}')
+    except Exception as e:
+        print(f"Error in workflow test: {str(e)}")
+        return
     print('\nTesting DingTalk message sending...')
     send_data(data)
 

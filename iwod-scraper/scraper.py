@@ -7,7 +7,7 @@ import requests
 import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from browser_automation import navigate_browser, run_javascript_browser, view_browser
+from browser_automation import navigate_browser, run_javascript_browser, view_browser, get_browser_console
 
 # Authentication monitoring
 AUTH_ATTEMPT_LIMIT = 5  # Maximum number of failed attempts before extended cooldown
@@ -277,19 +277,36 @@ def extract_data():
         retry_count = 0
         while retry_count < max_retries:
             try:
-                # Check if critical elements are present
+                # Force page reload and wait
+                logger.info("Forcing page reload")
+                run_javascript_browser("window.location.reload(true);")
+                time.sleep(5)  # Wait for reload
+                
+                # Check if elements are present and have values
                 js_check = """
-                const elements = {
-                    '客流': document.querySelector('p[devinid="84"]'),
-                    '销售': document.querySelector('p[devinid="54"]')
-                };
-                return Object.entries(elements).every(([key, el]) => {
-                    if (!el) {
-                        console.error(`Missing element: ${key}`);
-                        return false;
-                    }
-                    return true;
-                });
+                function checkElements() {
+                    const elements = {
+                        '客流': document.querySelector('p[devinid="84"]'),
+                        '销售': document.querySelector('p[devinid="54"]')
+                    };
+                    
+                    const results = {};
+                    Object.entries(elements).forEach(([key, el]) => {
+                        if (!el) {
+                            console.error(`Missing element: ${key}`);
+                            results[key] = false;
+                        } else {
+                            const value = el.textContent.trim();
+                            console.log(`Found element ${key} with value: ${value}`);
+                            results[key] = value !== '';
+                        }
+                    });
+                    
+                    const allPresent = Object.values(results).every(v => v);
+                    console.log('All elements present and populated:', allPresent);
+                    return allPresent;
+                }
+                checkElements();
                 """
                 if run_javascript_browser(js_check):
                     logger.info("Page reload successful, all elements present")
@@ -314,24 +331,77 @@ def extract_data():
             if not handle_token_expiration():
                 raise Exception("Failed to refresh token")
         
-        # Execute JavaScript to extract data using specific devinids
-        js_script = """
-        const metrics = {};
-        metrics['线上销售额元'] = document.querySelector('p[devinid="54"]').textContent;
-        metrics['线下销售额元'] = document.querySelector('p[devinid="59"]').textContent;
-        metrics['结算金额元'] = document.querySelector('p[devinid="64"]').textContent;
-        metrics['新增会员人'] = document.querySelector('p[devinid="69"]').textContent;
-        metrics['新增潜客人'] = document.querySelector('p[devinid="74"]').textContent;
-        metrics['售课节'] = document.querySelector('p[devinid="79"]').textContent;
-        metrics['客流人次'] = document.querySelector('p[devinid="84"]').textContent;
-        console.log(JSON.stringify(metrics, null, 2));
-        metrics;
+        # Extract data with retry logic
+        logger.info("Extracting metrics after reload")
+        extract_script = """
+        (async function() {
+            try {
+                const elements = {
+                    '线上销售额元': document.querySelector('p[devinid="54"]'),
+                    '线下销售额元': document.querySelector('p[devinid="59"]'),
+                    '结算金额元': document.querySelector('p[devinid="64"]'),
+                    '新增会员人': document.querySelector('p[devinid="69"]'),
+                    '新增潜客人': document.querySelector('p[devinid="74"]'),
+                    '售课节': document.querySelector('p[devinid="79"]'),
+                    '客流人次': document.querySelector('p[devinid="84"]')
+                };
+                
+                const missingElements = Object.entries(elements)
+                    .filter(([key, el]) => !el)
+                    .map(([key]) => key);
+                
+                if (missingElements.length > 0) {
+                    console.error('Missing elements:', missingElements.join(', '));
+                    return null;
+                }
+                
+                const metrics = {};
+                Object.entries(elements).forEach(([key, el]) => {
+                    metrics[key] = el.textContent;
+                });
+                
+                console.log('EXTRACTED_METRICS:', JSON.stringify(metrics));
+                return metrics;
+            } catch (error) {
+                console.error('Error extracting metrics:', error);
+                return null;
+            }
+        })();
         """
         
-        result = run_javascript_browser(js_script)
+        # Try to extract data with retries
+        max_retries = 3
+        retry_delay = 2
+        metrics = None
         
-        # Parse the extracted data
-        metrics = json.loads(result)
+        for attempt in range(max_retries):
+            run_javascript_browser(extract_script)
+            console_output = get_browser_console()
+            
+            # Parse metrics from console output
+            for line in console_output.split('\n'):
+                if 'EXTRACTED_METRICS:' in line:
+                    try:
+                        metrics_json = line.split('EXTRACTED_METRICS:', 1)[1].strip()
+                        raw_metrics = json.loads(metrics_json)
+                        if raw_metrics:
+                            metrics = raw_metrics
+                            logger.info(f"Successfully extracted metrics on attempt {attempt + 1}")
+                            break
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Failed to parse metrics JSON: {e}")
+                    except Exception as e:
+                        logger.error(f"Error processing metrics: {e}")
+            
+            if metrics:
+                break
+                
+            if attempt < max_retries - 1:
+                logger.warning(f"Retry {attempt + 1}/{max_retries} - waiting {retry_delay}s")
+                time.sleep(retry_delay)
+        
+        if not metrics:
+            raise Exception("Failed to extract metrics after retries")
         data = {
             'timestamp': datetime.now(BEIJING_TZ).strftime('%Y-%m-%d %H:%M:%S'),
             'metrics': {
