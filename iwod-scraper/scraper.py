@@ -29,10 +29,14 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler('scraper.log'),
-        logging.FileHandler('scraper.error.log', level=logging.ERROR),
         logging.StreamHandler()
     ]
 )
+
+# Add error log handler separately
+error_handler = logging.FileHandler('scraper.error.log')
+error_handler.setLevel(logging.ERROR)
+logging.getLogger().addHandler(error_handler)
 
 # Create logger
 logger = logging.getLogger('iwod_scraper')
