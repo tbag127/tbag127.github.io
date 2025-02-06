@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main Shell Shape -->
+  <g transform="translate(50,50)">
+    <title>贝壳下降握点 (Shell Descent Hold)</title>
+    <!-- Front View -->
+    <g>
+      <path d="M 0,0 C 50,-20 150,-20 200,0 C 220,40 220,120 200,160 C 150,180 50,180 0,160 C -20,120 -20,40 0,0" 
+            fill="none" 
+            stroke="black" 
+            stroke-width="2"/>
+      
+      <!-- Inner Shell Pattern -->
+      <path d="M 20,20 C 60,5 140,5 180,20 C 195,50 195,110 180,140 C 140,155 60,155 20,140 C 5,110 5,50 20,20" 
+            fill="none" 
+            stroke="black" 
+            stroke-width="1"
+            stroke-dasharray="4,2"/>
+      
+      <!-- Shell Ridges -->
+      <path d="M 40,30 C 80,20 120,20 160,30 M 35,60 C 80,50 120,50 165,60 M 30,90 C 80,80 120,80 170,90 M 35,120 C 80,110 120,110 165,120" 
+            stroke="gray" 
+            stroke-width="1"/>
+    </g>
+
+    <!-- Side View -->
+    <g transform="translate(300,0)">
+      <path d="M 0,0 C 40,-20 80,-20 100,0 C 120,40 120,120 100,160 C 80,180 40,180 0,160 C -20,120 -20,40 0,0" 
+            fill="none" 
+            stroke="black" 
+            stroke-width="2"/>
+      
+      <!-- Depth Indicator -->
+      <path d="M -30,80 L 130,80" 
+            stroke="gray" 
+            stroke-dasharray="5,5"/>
+      <text x="140" y="85" font-size="12">90mm</text>
+    </g>
+  </g>
+
+  <!-- Dimensions -->
+  <g transform="translate(50,300)">
+    <text x="0" y="0" font-size="12">尺寸 (Dimensions):</text>
+    <text x="0" y="20" font-size="12">- 宽度: 200mm</text>
+    <text x="0" y="40" font-size="12">- 高度: 160mm</text>
+    <text x="0" y="60" font-size="12">- 深度: 90mm</text>
+    <text x="0" y="80" font-size="12">- 边缘半径: 25mm</text>
+  </g>
+
+  <!-- Mounting Points -->
+  <g transform="translate(50,400)">
+    <circle cx="50" cy="0" r="5" fill="none" stroke="black"/>
+    <circle cx="150" cy="0" r="5" fill="none" stroke="black"/>
+    <text x="0" y="30" font-size="12">双螺栓固定点 (3/8")</text>
+  </g>
+
+  <!-- Descent Arrow -->
+  <g transform="translate(200,450)">
+    <path d="M 0,0 L 20,40 L 40,0 L 20,50 Z" 
+          fill="none" 
+          stroke="black"/>
+    <text x="-20" y="70" font-size="12">下降指示箭头</text>
+  </g>
+
+  <!-- Surface Treatment -->
+  <g transform="translate(400,300)">
+    <text x="0" y="0" font-size="12">表面处理 (Surface Treatment):</text>
+    <text x="0" y="20" font-size="12">- 内部: 深度纹理</text>
+    <text x="0" y="40" font-size="12">- 外部: 细腻纹理</text>
+  </g>
+</svg>
