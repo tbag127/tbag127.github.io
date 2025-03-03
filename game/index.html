@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Super Forbidden Game - Puzzle Adventure</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+        #game-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+        /* Mobile touch controls */
+        .touch-controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: none; /* Hidden by default, shown on touch devices */
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+        .touch-controls button {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            font-size: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation; /* Prevent double-tap zoom */
+            user-select: none; /* Prevent text selection */
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .touch-controls button:active {
+            background-color: rgba(255, 255, 255, 0.5);
+            transform: scale(0.95);
+        }
+        /* Movement controls container */
+        .movement-controls {
+            display: flex;
+            gap: 10px;
+        }
+        /* Action controls container */
+        .action-controls {
+            display: flex;
+            gap: 10px;
+        }
+        /* Character switch controls */
+        .character-switch {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+        .character-switch button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            font-size: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .character-switch button.active {
+            background-color: rgba(255, 0, 0, 0.7);
+        }
+        .character-switch button:active {
+            transform: scale(0.95);
+        }
+        /* Only show touch controls on touch devices */
+        @media (hover: none) and (pointer: coarse) {
+            .touch-controls {
+                display: flex;
+            }
+            .character-switch {
+                display: flex;
+            }
+        }
+        /* Responsive adjustments for different screen sizes */
+        @media (max-width: 600px) {
+            .touch-controls button {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+            .character-switch button {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+        }
+        @media (max-width: 400px) {
+            .touch-controls button {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+            .character-switch button {
+                width: 35px;
+                height: 35px;
+                font-size: 14px;
+            }
+        }
+        /* Loading screen */
+        #loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        #loading-screen h1 {
+            color: #fff;
+            font-family: Arial, sans-serif;
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+        #loading-bar {
+            width: 300px;
+            height: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #loading-progress {
+            width: 0%;
+            height: 100%;
+            background-color: #f00;
+            transition: width 0.3s;
+        }
+    </style>
+    <!-- Phaser 3 from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+</head>
+<body>
+    <!-- Loading screen -->
+    <div id="loading-screen">
+        <h1>Super Forbidden Game</h1>
+        <div id="loading-bar">
+            <div id="loading-progress"></div>
+        </div>
+    </div>
+    
+    <div id="game-container"></div>
+    
+    <!-- Mobile touch controls -->
+    <div class="touch-controls">
+        <div class="movement-controls">
+            <button id="btn-left">←</button>
+            <button id="btn-up">↑</button>
+            <button id="btn-down">↓</button>
+        </div>
+        <div class="action-controls">
+            <button id="btn-action">⚡</button>
+            <button id="btn-right">→</button>
+        </div>
+    </div>
+    
+    <!-- Character switch controls for mobile -->
+    <div class="character-switch">
+        <button id="char-btn-0" class="active">H</button>
+        <button id="char-btn-1">X</button>
+        <button id="char-btn-2">J</button>
+    </div>
+
+    <!-- Game scripts -->
+    <!-- Utilities -->
+    <script src="js/utils/ResponsiveScale.js"></script>
+    
+    <!-- Character classes -->
+    <script src="js/objects/Character.js"></script>
+    <script src="js/objects/HangYi.js"></script>
+    <script src="js/objects/XinNa.js"></script>
+    <script src="js/objects/JiKairui.js"></script>
+    
+    <!-- Game scenes -->
+    <script src="js/scenes/BootScene.js"></script>
+    <script src="js/scenes/MenuScene.js"></script>
+    <script src="js/scenes/Level1Scene.js"></script>
+    <script src="js/scenes/Level2Scene.js"></script>
+    
+    <!-- Main game script -->
+    <script src="js/main.js"></script>
+    
+    <script>
+        // Simple loading screen
+        window.addEventListener('load', function() {
+            const loadingScreen = document.getElementById('loading-screen');
+            const loadingProgress = document.getElementById('loading-progress');
+            
+            // Simulate loading progress
+            let progress = 0;
+            const interval = setInterval(function() {
+                progress += 5;
+                loadingProgress.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(function() {
+                        loadingScreen.style.display = 'none';
+                    }, 500);
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>
